@@ -1,3 +1,5 @@
+import os
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +8,9 @@ from backend.src.routes import api_router
 from backend.src.core.config import CORS_ALLOW_ORIGINS
 from backend.src.core.middleware import FirebaseAuthMiddleware, log_requests
 from backend.src.lifespan import lifespan
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Create the FastAPI application instance
 app = FastAPI(
@@ -24,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.middleware("http")(log_requests)
-app.add_middleware(FirebaseAuthMiddleware)
+
 
 
 # Include the main API router with a prefix
@@ -34,4 +39,4 @@ app.include_router(api_router)
 
 if __name__ == "__main__":
     # Entry point for local development
-    uvicorn.run("backend.src.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("backend.src.main:app", host="0.0.0.0", port=int(os.getenv("PORT")), reload=True)

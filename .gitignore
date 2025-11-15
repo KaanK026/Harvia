@@ -3,7 +3,6 @@
 __pycache__/
 *.pyc
 .DS_Store
-node_modules/
 dist/
 .vscode/
 backend/predictive_model/synthetic_sauna_env_data.csv
