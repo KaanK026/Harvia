@@ -1,0 +1,13 @@
+.venv
+.idea
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+dist/
+.vscode/
+backend/predictive_model/synthetic_sauna_env_data.csv
+backend/predictive_model/optimal_synthetic_sauna_settings.csv
+backend/predictive_model/optimal_synthetic_sauna_settings_with_height_.csv
+.env
+*.json
