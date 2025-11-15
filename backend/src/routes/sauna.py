@@ -1,20 +1,25 @@
-import uuid
-from datetime import datetime, timezone
-from typing import Optional, List
+import time
 
+import numpy as np
 from fastapi import APIRouter, Request
+import matplotlib.pyplot as plt
 
+from backend.bridge.bridge import send_to_ts
+from backend.src.core.client import client, device
 from backend.src.models.error_models import generic_fail
 from backend.src.models.request_models import StartSessionRequest, StopSessionRequest, SaunaRecommendationRequest
 from backend.src.models.response_models import StartSessionResponse, StopSessionResponse, SaunaRecommendationResponse
 from backend.src.services.recommendation import get_sauna_engine
 from backend.src.utils.logger import get_logger
 
+device_online = True
+
+def set_device_online(status: bool):
+    global device_online
+    device_online = status
+
 logger = get_logger("sauna-backend.sauna")
 router = APIRouter()
-#TODO: FIX
-
-
 
 # Keep your existing response model
 # from your code: SaunaRecommendationResponse
@@ -67,4 +72,143 @@ def post_sauna_recommendations(request: SaunaRecommendationRequest):
         raise generic_fail(
             detail=f"Error generating recommendations: {str(e)}"
         )
+
+
+@router.post("/start_session")
+def post_start_session(request: StartSessionRequest):
+    from backend.brief.qa_brief  import provide_brief, brief_setup
+
+    start_time = time.time()
+
+    #TODO: assumning the device is off. In real implementation, check device status.
+    client.devices.send_command(device_id=device.device_id, state="on")
+    set_device_online(True)
+    client.devices.change_profile(device_id=device.device_id, profile="3")
+    client.devices.set_target(device_id=device.device_id, temperature=request.temperature, humidity=request.humidity)
+
+    INTERVAL = 2  # seconds
+    TOTAL_DURATION = request.session_length # Convert minutes to seconds
+    POINTS = TOTAL_DURATION // INTERVAL
+
+    timestamps = []
+    temperatures = []
+    humidities = []
+
+    for i in range(POINTS):
+
+        try:
+            if not device_online:  # If sauna is turned off
+                print("Sauna session ended prematurely by user.")
+                stop_time = time.time()
+                elapsed_time = stop_time - start_time
+                payload = {
+                    'start' : start_time,
+                    'stop' : stop_time,
+                    'humidity': request.humidity,
+                    'elapsed' : elapsed_time,
+                    'uid': request.uid,
+                    'temperature': request.temperature
+                }
+                send_to_ts(payload)
+                break
+
+            response = client.data.get_latest_data(device_id=device.device_id)
+            print(f"Sample {i + 1}: {response}")
+
+            temp1 = response["data"].get("temp")
+            hum2 = response["data"].get("hum")
+
+            timestamps.append(i * INTERVAL)
+            temperatures.append(temp1)
+            humidities.append(hum2)
+
+            print(f"  -> Temp: {temp1}°C, Humidity: {hum2}%")
+        except Exception as e:
+            print("Error:", e)
+
+        time.sleep(INTERVAL)
+
+    print("\nData collection complete! Generating graph...")
+
+    # ---- GRAPH WITH DUAL Y-AXES ----
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    # Temperature axis
+    color = 'tab:red'
+    ax1.set_xlabel("Time (seconds)", fontsize=12)
+    ax1.set_ylabel("Temperature (°C)", color=color, fontsize=12)
+    ax1.plot(timestamps, temperatures, color=color, marker='o', linewidth=2, markersize=8, label="Temperature")
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.grid(True, alpha=0.3)
+
+    temp_min = min(temperatures) - 10
+    temp_max = max(temperatures) + 10
+    ax1.set_ylim([temp_min, temp_max])
+
+    # Humidity axis
+    ax2 = ax1.twinx()
+    color = 'tab:blue'
+    ax2.set_ylabel("Humidity (%)", color=color, fontsize=12)
+    ax2.plot(timestamps, humidities, color=color, marker='s', linewidth=2, markersize=8, label="Humidity")
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    hum_min = min(humidities) - 5
+    hum_max = max(humidities) + 5
+    ax2.set_ylim([hum_min, hum_max])
+
+    plt.title("Sauna Brief", fontsize=14, fontweight='bold')
+    fig.tight_layout()
+    # ---- EXTRACT ALL AXIS DATA INTO ARRAYS ----
+    axis_data = {
+        # X-axis data (shared by both plots)
+        'x_axis': {
+            'label': ax1.get_xlabel(),
+            'data': np.array(timestamps),
+            'limits': ax1.get_xlim()
+        },
+
+        # Left Y-axis (Temperature)
+        'y_axis_left': {
+            'label': ax1.get_ylabel(),
+            'data': np.array(temperatures),
+            'limits': ax1.get_ylim(),
+            'color': 'tab:red'
+        },
+
+        # Right Y-axis (Humidity)
+        'y_axis_right': {
+            'label': ax2.get_ylabel(),
+            'data': np.array(humidities),
+            'limits': ax2.get_ylim(),
+            'color': 'tab:blue'
+        }
+    }
+
+    chain = brief_setup("gpt-4o")
+    analysis = provide_brief(
+        chat_chain=chain,
+        question=f"Comment on the graph's data here {axis_data}",
+        session_id="session_001"
+    )
+    brief = analysis["answer"]
+    print(brief)
+    if device_online:
+        client.devices.send_command(device_id=device.device_id, state="off")
+        stop_time = time.time()
+        payload = {
+            'start' : start_time,
+            'stop' : stop_time,
+            'humidity': request.humidity,
+            'elapsed' : stop_time - start_time,
+            'uid': request.uid,
+            'temperature': request.temperature
+        }
+        send_to_ts(payload)
+
+@router.post("/end_session")
+def post_stop_session():
+    client.devices.send_command(device_id=device.device_id, state="off")
+    set_device_online(False)
+    return {"message": "Sauna session stopped successfully."}
+
 

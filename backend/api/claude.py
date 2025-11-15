@@ -836,28 +836,24 @@ class HarviaAPI:
         }
 
 
-# Example usage
-if __name__ == "__main__":
-    # Initialize client
-    client = HarviaAPI(username="harviahackathon2025@gmail.com", password="junction25!")
-
-
-    print(f"API Version: {client.get_api_version()}")
-    print(f"Debug Info: {client.debug_info()}")
-
-    # List all devices
-
-    try:
-        print(client.devices.get_devices_by_type(device_type="Fenix"))
-        # Get device by serial number
-        device = client.devices.get_device_by_serial("2513005304")
-        if device:
-            print(f"\nFound device by serial: {device}")
-            print(device.device_id)
-            client.devices.send_command(device_id=device.device_id, state="on")
-            client.devices.change_profile(device_id=device.device_id, profile="3")
-            client.devices.set_target(device_id=device.device_id, temperature=67.0, humidity=67.0)
-
-
-    except HarviaAPIError as e:
-        print(f"API Error: {e}")
+# # Example usage
+# if __name__ == "__main__":
+#     # Initialize client
+#     client = HarviaAPI(username="harviahackathon2025@gmail.com", password="junction25!")
+#
+#
+#     print(f"API Version: {client.get_api_version()}")
+#     print(f"Debug Info: {client.debug_info()}")
+#
+#     # List all devices
+#
+#     try:
+#         print(client.devices.get_devices_by_type(device_type="Fenix"))
+#         # Get device by serial number
+#         device = client.devices.get_device_by_serial("2513005304")
+#         data = client.data.get_latest_data(device_id=device.device_id)
+#         print(data)
+#
+#
+#     except HarviaAPIError as e:
+#         print(f"API Error: {e}")

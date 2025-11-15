@@ -3,7 +3,11 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 class StartSessionRequest(BaseModel):
-    sauna_type: Optional[str] = Field(default="dry")  # e.g., dry/steam/infrared
+    temperature: int = Field()
+    humidity: int = Field()
+    session_length: int = Field()  # in seconds
+    uid: str = Field()
+
 
 class StopSessionRequest(BaseModel):
     session_id: str

@@ -1,12 +1,7 @@
-from PIL import Image
-from io import BytesIO
-
 #ADD INSTAGRAM STORY SHEARING
 
 if __name__ == "__main__":
-    from api.claude import HarviaAPI
-    import json
-    import base64
+    from backend.api.claude import HarviaAPI
     from qa_brief import provide_brief, brief_setup
 
     ##Frontenden çek
@@ -17,9 +12,7 @@ if __name__ == "__main__":
     client.devices.set_target(device_id=device.device_id, temperature=84, humidity=10)
     from dotenv import load_dotenv
     import time
-    import requests
     import matplotlib.pyplot as plt
-    import io
     import numpy as np
 
     load_dotenv()
