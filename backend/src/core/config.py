@@ -10,13 +10,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MODEL_PATH = PROJECT_ROOT /  "predictive_model" / "sauna_recommendation_model.pth"
 SCALER_PATH = PROJECT_ROOT /  "predictive_model" / "sauna_scaler.pkl"
 
-# Firebase Configuration
-FIREBASE_SERVICE_ACCOUNT_PATH = PROJECT_ROOT / os.getenv(
-    "FIREBASE_SERVICE_ACCOUNT_FILENAME", "sauna-edfbb-firebase-adminsdk-fbsvc-a0c2c33b68.json"
-)
-
-FIREBASE_STORAGE_BUCKET = "sauna-edfbb.firebasestorage.app"
-
 # OpenAI API Key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 

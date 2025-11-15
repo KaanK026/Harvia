@@ -6,7 +6,6 @@ from io import BytesIO
 if __name__ == "__main__":
     from api.claude import HarviaAPI
     import json
-    from backend.src.core.core_firebase_admin import upload_session_image, download_session_image
     import base64
     from qa_brief import provide_brief, brief_setup
 
@@ -109,22 +108,6 @@ if __name__ == "__main__":
             'color': 'tab:blue'
         }
     }
-
-    # ---- EXPORT TO BYTES ----
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png", dpi=300)
-    buf.seek(0)
-    image_bytes = buf.getvalue()
-    buf.close()
-
-    upload_session_image(uid="test_user", session_id="session_001",
-                         image_bytes=image_bytes, filename="sauna_brief.png")
-
-    image_bytes = download_session_image(uid="test_user", session_id="session_001",
-                                         filename="sauna_brief.png")
-
-    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-    image_url = f"data:image/png;base64,{image_b64}"
 
     chain = brief_setup("gpt-4o")
     analysis = provide_brief(

@@ -10,13 +10,13 @@ class StopSessionRequest(BaseModel):
     user_id: Optional[str] = None
 
 
-class SaunaRecommendationRequest(BaseModel):
-    age: Optional[int] = None
-    gender: Optional[str] = None
-    height: Optional[float] = None  # in meters
-    weight: Optional[float] = None  # in kg
-    goals: Optional[List[str]] = None  # List of goal IDs
 
+class SaunaRecommendationRequest(BaseModel):
+    age: int
+    gender: str
+    height: int
+    weight: int
+    goals: List[str]
 
 #NOT USED
 class ChatMessageRequest(BaseModel):

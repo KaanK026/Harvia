@@ -35,7 +35,6 @@ class SaunaRecommendationResponse(BaseModel):
     temperature: float  # in Celsius
     humidity: float  # in percentage
     session_length: float  # in minutes
-    user_id: str
     goals_used: List[str]
 
 #NOT USED

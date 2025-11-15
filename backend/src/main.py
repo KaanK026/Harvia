@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.src.routes import api_router
 from backend.src.core.config import CORS_ALLOW_ORIGINS
-from backend.src.core.middleware import FirebaseAuthMiddleware, log_requests
+from backend.src.core.middleware import log_requests
 from backend.src.lifespan import lifespan
 from dotenv import load_dotenv
 
