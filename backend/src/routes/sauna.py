@@ -11,7 +11,7 @@ from backend.src.models.request_models import StartSessionRequest, StopSessionRe
 from backend.src.models.response_models import StartSessionResponse, StopSessionResponse, SaunaRecommendationResponse
 from backend.src.services.recommendation import get_sauna_engine
 from backend.src.utils.logger import get_logger
-
+from datetime import datetime
 device_online = True
 
 def set_device_online(status: bool):
@@ -78,15 +78,12 @@ def post_sauna_recommendations(request: SaunaRecommendationRequest):
 def post_start_session(request: StartSessionRequest):
     from backend.brief.qa_brief  import provide_brief, brief_setup
 
-    start_time = time.time()
-
-    #TODO: assumning the device is off. In real implementation, check device status.
     client.devices.send_command(device_id=device.device_id, state="on")
     set_device_online(True)
     client.devices.change_profile(device_id=device.device_id, profile="3")
     client.devices.set_target(device_id=device.device_id, temperature=request.temperature, humidity=request.humidity)
-
-    INTERVAL = 2  # seconds
+    start_time = datetime.now()
+    INTERVAL = 1  # seconds
     TOTAL_DURATION = request.session_length # Convert minutes to seconds
     POINTS = TOTAL_DURATION // INTERVAL
 
@@ -98,18 +95,6 @@ def post_start_session(request: StartSessionRequest):
 
         try:
             if not device_online:  # If sauna is turned off
-                print("Sauna session ended prematurely by user.")
-                stop_time = time.time()
-                elapsed_time = stop_time - start_time
-                payload = {
-                    'start' : start_time,
-                    'stop' : stop_time,
-                    'humidity': request.humidity,
-                    'elapsed' : elapsed_time,
-                    'uid': request.uid,
-                    'temperature': request.temperature
-                }
-                send_to_ts(payload)
                 break
 
             response = client.data.get_latest_data(device_id=device.device_id)
@@ -128,6 +113,7 @@ def post_start_session(request: StartSessionRequest):
 
         time.sleep(INTERVAL)
 
+    stop_time = datetime.now()
     print("\nData collection complete! Generating graph...")
 
     # ---- GRAPH WITH DUAL Y-AXES ----
@@ -184,6 +170,8 @@ def post_start_session(request: StartSessionRequest):
         }
     }
 
+
+
     chain = brief_setup("gpt-4o")
     analysis = provide_brief(
         chat_chain=chain,
@@ -191,19 +179,49 @@ def post_start_session(request: StartSessionRequest):
         session_id="session_001"
     )
     brief = analysis["answer"]
-    print(brief)
-    if device_online:
-        client.devices.send_command(device_id=device.device_id, state="off")
-        stop_time = time.time()
-        payload = {
-            'start' : start_time,
-            'stop' : stop_time,
-            'humidity': request.humidity,
-            'elapsed' : stop_time - start_time,
-            'uid': request.uid,
-            'temperature': request.temperature
-        }
-        send_to_ts(payload)
+
+    client.devices.send_command(device_id=device.device_id, state="off")
+
+    elapsed_time = (stop_time - start_time).total_seconds()
+
+    json_ready_data = to_json_safe(axis_data)
+
+    payload = {
+        'start': str(start_time),
+        'stop': str(stop_time),
+        'humidity': request.humidity,
+        'elapsed': elapsed_time,
+        'uid': request.uid,
+        'temperature': request.temperature,
+        'brief': brief,
+        'axis_data': str(json_ready_data)
+    }
+    send_to_ts(payload)
+
+
+def to_json_safe(obj):
+    # numpy scalar → native Python scalar
+    if isinstance(obj, np.generic):
+        return obj.item()
+
+    # numpy array → list
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+
+    # tuple → list (JSON cannot represent tuples)
+    if isinstance(obj, tuple):
+        return [to_json_safe(v) for v in obj]
+
+    # list → list
+    if isinstance(obj, list):
+        return [to_json_safe(v) for v in obj]
+
+    # dict → dict
+    if isinstance(obj, dict):
+        return {k: to_json_safe(v) for k, v in obj.items()}
+
+    # leave normal Python types unchanged
+    return obj
 
 @router.post("/end_session")
 def post_stop_session():
